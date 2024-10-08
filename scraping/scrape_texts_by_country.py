@@ -9,6 +9,9 @@ from random import sample
 
 
 # define variables used in the functions
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/47.3"
+}
 variables = [
     "text",
     "text_length",
@@ -18,8 +21,6 @@ variables = [
 ]  # names for the extracted text dataframe
 min_length = 150  # minimum text length of paragraphs
 tags_to_keep = ["p", "h1", "h2", "h3"]  # keep just the text elements in this list
-
-sample_num = 10
 
 
 def write_error_to_csv(url, error, file):
@@ -62,7 +63,7 @@ def extract_html_text(url, file_good, file_bad):
         None if no error occurred during extraction.
     """
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers, timeout=(5, 10))
 
         response.raise_for_status()
 
@@ -76,6 +77,7 @@ def extract_html_text(url, file_good, file_bad):
 
         # Get the title and add as first row for this url
         title = soup.title.string if soup.title else "No title"
+        title = title if title != None else "No title"
         title_list = [title, len(title), "title", url, None]
         text_elements = [dict(zip(variables, title_list))]
 
@@ -123,7 +125,7 @@ def extract_html_text(url, file_good, file_bad):
         return pd.DataFrame(), err
 
 
-def extract_texts_from_urls(country="Germany"):
+def extract_texts_from_urls(country="Germany", sample_num=0):
     """
     Extracts html text from a list of urls, filters out short texts and writes to csv.
 
@@ -150,7 +152,8 @@ def extract_texts_from_urls(country="Germany"):
     urls_clean = [re.sub(r"#.*$", "", url) for url in urls_raw]
     urls_clean = list(set(urls_clean))
 
-    urls_test = sample(urls_clean, sample_num)
+    if sample_num > 0:
+        urls_clean = sample(urls_clean, sample_num)
 
     # Define and write initial csv files (if not existing yet)
     outfile_good = f"scraping/{country}/scraped_data.csv"
@@ -179,8 +182,11 @@ def extract_texts_from_urls(country="Germany"):
     all_dfs = []
     errors = []
 
+    urls_to_do = [url for url in urls_clean if url not in urls_done]
+    print(f"Total urls to scrape: {len(urls_to_do)}")
+
     # Loop over unique and unscrape urls and write results (texts or error) to csv
-    for url in [url for url in urls_test if url not in urls_done]:
+    for url in urls_to_do:
         print(url)
 
         df, error = extract_html_text(url, outfile_good, outfile_bad)
@@ -197,11 +203,12 @@ def extract_texts_from_urls(country="Germany"):
     return combined_df, errors_df
 
 
-test, test_errors = extract_texts_from_urls()
+data, data_errors = extract_texts_from_urls(country="USA", sample_num=0)
 
 
 # TODO indexing urls to save storage space ? necessary ?
 # TODO check redirected urls for patterns: just "full" redirects
 
-# IDEA count total length for page, # of headlines, # of paragraphs
-# IDEA filter whole page by topic related keywords
+# TODO clean final results from cookie consent texts
+# TODO remove webmail
+# TODO remove "No title" title rows
