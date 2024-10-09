@@ -186,8 +186,8 @@ def extract_texts_from_urls(country="Germany", sample_num=0):
     print(f"Total urls to scrape: {len(urls_to_do)}")
 
     # Loop over unique and unscrape urls and write results (texts or error) to csv
-    for url in urls_to_do:
-        print(url)
+    for count, url in enumerate(urls_to_do, start=1):
+        print(count, url)
 
         df, error = extract_html_text(url, outfile_good, outfile_bad)
 
