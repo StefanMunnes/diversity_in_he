@@ -10,7 +10,7 @@ from random import sample
 
 # define variables used in the functions
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/47.3"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0"
 }
 variables = [
     "text",
@@ -42,7 +42,7 @@ def write_error_to_csv(url, error, file):
     )
 
 
-def extract_html_text(url, file_good, file_bad):
+def extract_html_text(url, file_good, file_bad, verify=True):
     """
     Extracts the main text from a given url, keep just useful text elements and writes to csv.
 
@@ -63,13 +63,13 @@ def extract_html_text(url, file_good, file_bad):
         None if no error occurred during extraction.
     """
     try:
-        response = requests.get(url, headers=headers, timeout=(5, 10))
+        response = requests.get(url, headers=headers, timeout=(5, 10), verify=verify)
 
         response.raise_for_status()
 
         # Exit with error if redirected to a PDF
         if response.headers["Content-Type"] == "application/pdf":
-            write_error_to_csv(url, "Redirected, file_bad to PDF")
+            write_error_to_csv(url, "Redirected to PDF", file_bad)
             return pd.DataFrame(), "Redirect to PDF"
 
         # Parse the content of the response with BeautifulSoup
@@ -203,7 +203,7 @@ def extract_texts_from_urls(country="Germany", sample_num=0):
     return combined_df, errors_df
 
 
-data, data_errors = extract_texts_from_urls(country="USA", sample_num=0)
+data, data_errors = extract_texts_from_urls()
 
 
 # TODO indexing urls to save storage space ? necessary ?
