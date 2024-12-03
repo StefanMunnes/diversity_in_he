@@ -78,12 +78,14 @@ def extract_html_text(url, file_good, file_bad, verify=True):
         # Get the title and add as first row for this url
         title = soup.title.string if soup.title else "No title"
         title = title if title != None else "No title"
+        title = " ".join(title.split())
         title_list = [title, len(title), "title", url, None]
         text_elements = [dict(zip(variables, title_list))]
 
         # Loop over valid tags, get the text and meta data, and add to the list
         for tag in soup.find_all(tags_to_keep, recursive=True):
             text = tag.get_text(separator=" ", strip=True)
+            text = " ".join(text.split())
             text_length = len(text)
             if (tag.name == "p" and text_length >= min_length) or (
                 re.match(r"^h", tag.name) and text_length > 0
