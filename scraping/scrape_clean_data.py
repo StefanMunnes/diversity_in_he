@@ -12,6 +12,24 @@ def extract_domain(url):
     extracted = tldextract.extract(url)
     return f"{extracted.domain}.{extracted.suffix}"
 
+replacement_dict = {
+    '√§': 'ä', #
+    '√∂': 'ö', #
+    '√ľ': 'ü', #
+    '√Ą': 'Ä', #
+    '√Ė': 'Ö', #
+    '√ú': 'Ü',
+    '√ü': 'ß', #
+    '‚Äě': '„', #
+    '‚Äú': '“', #
+}
+
+def correct_umlaute(text):
+    # Ensure the input is a string for replacement operation
+    if isinstance(text, str):
+        for wrong, right in replacement_dict.items():
+            text = text.replace(wrong, right)
+    return text
 
 # 1. load and prepare data
 
@@ -31,31 +49,35 @@ querry = (
     .filter(pl.col("url").str.contains(r"^http"))
     .filter(~pl.col("text").str.contains(r"(?i)cookies"))
     .filter(~pl.col("text").str.contains(r"No title"))
-    # 3. add column: # of words
+    # 3. correct umlaute
+    .with_columns(
+        pl.col("text").map_elements(lambda t: correct_umlaute(t), return_dtype=pl.Utf8)
+    )
+    # 4. add column: # of words
     .with_columns(
         pl.col("text")
         .str.split(" ")
         .map_elements(lambda lst: len(lst), return_dtype=pl.Int64)
         .alias("text_words")
     )
-    # 4. add column: domain
+    # 5. add column: domain
     .with_columns(
         pl.when(pl.col("url_redirect").is_not_null())
         .then(pl.col("url_redirect").map_elements(extract_domain, return_dtype=pl.Utf8))
         .otherwise(pl.col("url").map_elements(extract_domain, return_dtype=pl.Utf8))
         .alias("domain")
     )
-    # 5. add order of text elements per url
+    # 6. add order of text elements per url
     .with_columns(
         (pl.cum_count('text').over('url') + 1).alias('order')
     )
-    # 6. keep just unique text elements per domain
+    # 7. keep just unique text elements per domain
     .unique(subset=["domain", "text"])
-    # 7. restore order of text elements per url
+    # 8. restore order of text elements per url
     .sort(["country", "domain", "url", "order"])
-    # 8. remove urls containing "datenschutz"
+    # 9. remove urls containing "datenschutz"
     .filter(~pl.col("url").str.contains(r"(?i)datenschutz"))
-    # 9. remove all text elements with text_length greater than 4000 characters
+    # 10. remove all text elements with text_length greater than 4000 characters
     .filter(pl.col('text_length') < 4000)
 )
 
