@@ -12,25 +12,6 @@ def extract_domain(url):
     extracted = tldextract.extract(url)
     return f"{extracted.domain}.{extracted.suffix}"
 
-replacement_dict = {
-    '√§': 'ä', #
-    '√∂': 'ö', #
-    '√ľ': 'ü', #
-    '√Ą': 'Ä', #
-    '√Ė': 'Ö', #
-    '√ú': 'Ü',
-    '√ü': 'ß', #
-    '‚Äě': '„', #
-    '‚Äú': '“', #
-}
-
-def correct_umlaute(text):
-    # Ensure the input is a string for replacement operation
-    if isinstance(text, str):
-        for wrong, right in replacement_dict.items():
-            text = text.replace(wrong, right)
-    return text
-
 # 1. load and prepare data
 
 # 1.1 load data & add country column
@@ -49,9 +30,9 @@ querry = (
     .filter(pl.col("url").str.contains(r"^http"))
     .filter(~pl.col("text").str.contains(r"(?i)cookies"))
     .filter(~pl.col("text").str.contains(r"No title"))
-    # 3. correct umlaute
+    # 3. remove unnecessary whitespace
     .with_columns(
-        pl.col("text").map_elements(lambda t: correct_umlaute(t), return_dtype=pl.Utf8)
+        pl.col("text").str.strip_chars().str.replace_all(r"\s+", " ")
     )
     # 4. add column: # of words
     .with_columns(
