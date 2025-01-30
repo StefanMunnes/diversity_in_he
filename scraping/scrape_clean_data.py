@@ -2,10 +2,6 @@ import polars as pl
 import tldextract
 
 # TODO list of URLs: remove ?.*
-# TODO list of URLs: keep ^http
-
-# TODO texts: remove Cookies
-# TODO texts: remove No Title
 
 # helper function: extract the domain from a given url
 def extract_domain(url):
@@ -21,11 +17,17 @@ data_ger = pl.scan_csv("scraping/Germany/scraped_data.csv").with_columns(
 data_usa = pl.scan_csv("scraping/USA/scraped_data.csv").with_columns(
     pl.lit("usa").alias("country")
 )
+data_uk = pl.scan_csv("scraping/UK/scraped_data.csv").with_columns(
+    pl.lit("uk").alias("country")
+)
+data_ind = pl.scan_csv("scraping/India/scraped_data.csv").with_columns(
+    pl.lit("ind").alias("country")
+)
 
 querry = (
     pl
     # 1. combine the dataframes (append rows)
-    .concat([data_ger, data_usa])
+    .concat([data_ger, data_usa, data_uk, data_ind])
     # 2. filter all text elements (keep just valid urls; remove cookies & no title)
     .filter(pl.col("url").str.contains(r"^http"))
     .filter(~pl.col("text").str.contains(r"(?i)cookies"))

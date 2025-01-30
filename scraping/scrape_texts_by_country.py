@@ -205,7 +205,7 @@ def extract_texts_from_urls(country="Germany", sample_num=0):
     return combined_df, errors_df
 
 
-data, data_errors = extract_texts_from_urls()
+data, data_errors = extract_texts_from_urls(country="India")
 
 
 # TODO indexing urls to save storage space ? necessary ?
