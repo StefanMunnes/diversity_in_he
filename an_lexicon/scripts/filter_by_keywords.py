@@ -1,5 +1,4 @@
 import polars as pl
-import re
 
 # 1. filter all text elements by diviersity keywords -> get unique urls
 # 2. keep all text elements from filteres urls
@@ -35,22 +34,38 @@ print_data_info(data_clean)
 
 # 1. filter polars dataframe text elements by diversity keywords
 
-# keywords from meeting with Sonia and Yasemin (see mails from 2024.12.02 and 2024.12.03)
+# keyword list
 keywords = [
     "diversity",
-    "diversität",
     "inclusion",
-    "inklusion",
-    "discrimination",
-    "diskriminierung",
-    "equality",
-    "gleichstellung",
+    "inclusive",
+    "equity",
+    "equitable",
+    "accessibility",
+    "accessible",
     "equal opportunity",
+    "equality",
+    "discriminate",
+    "discrimination",
+    "discriminatory",
+    "fairness",
+    "fairly",
+    "harassment",
+    "belonging",
+    "nondiscrimination",
+    "oppression",
+    "exclusion",
+    "diversität",
+    "inklusion",
     "chancengerechtigkeit",
-    "chancengleichheit"
+    "gleichstellung",
+    "diskriminierung",
+    "chancengleichheit",
+    "vielfalt",
+    "vielfält\S*"
 ]
 
-pattern = r'\b(' + '|'.join(re.escape(word) for word in keywords) + r')\b'
+pattern = r'\b(' + '|'.join(keywords) + r')\b'
 
 
 data_filtered = (
@@ -99,21 +114,42 @@ data_filtered = (
         .then(pl.lit(True))
         .otherwise(pl.lit(False))
     )
+    # keep just unique keywords (also after merge with followup)
+    .with_columns(keywords = pl.col("keywords").list.unique())
     # keep just text elements with keywords, that aren't headings and merged paragraphs
     .filter(
-        pl.col('keywords').list.len() > 0,
+        # (((pl.col('keywords').list.len() >= 2) & (pl.col("country") != "ger")) |
+        # ((pl.col('keywords').list.len() >= 1) & (pl.col("country") == "ger"))) &
+        # (~pl.col("is_heading") & ~pl.col("remove_following"))
+        pl.col('keywords').list.len() >= 2,
         ~pl.col("is_heading"),
         ~pl.col("remove_following")
     )
-    .select(["country", "url", "keywords", "text", "domain"])
+    .select(["keywords", "text", "country", "domain", "url"])
     # cast list of keywords to string
-    .with_columns(keywords=pl.col("keywords").list.join(" "))
+    .with_columns(keywords=pl.col("keywords").list.join(", "))
 )
 
 print_data_info(data_filtered)
-# Number of rows: 11382
-# Number of unique urls: 6186
-# Number of unique domains: 690
-# Mean rows per url: 1.84
+# Number of rows: 3259
+# Number of unique urls: 2088
+# Number of unique domains: 543
+# Mean rows per url: 1.56
 
-data_filtered.write_csv("an_lexicon/data_filtered.csv")
+data_filtered.write_csv("an_lexicon/data/data_filtered.csv")
+
+
+# export all text with excatlcy one keyword or at least two different for check
+
+import xlsxwriter
+
+with xlsxwriter.Workbook("an_lexicon/data/data_filtered.xlsx") as workbook:
+    (data_filtered
+        .filter(pl.col("keywords").str.split(", ").list.len() == 1)
+        .write_excel(workbook=workbook, worksheet = "keyword_1")
+    )
+    (
+    data_filtered
+        .filter(pl.col("keywords").str.split(", ").list.unique().list.len() >= 2)
+        .write_excel(workbook=workbook, worksheet = "keyword_2+")
+    )
