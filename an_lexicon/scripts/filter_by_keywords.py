@@ -26,10 +26,10 @@ def print_data_info(df: pl.DataFrame) -> None:
 data_clean = pl.read_csv("scraping/data_clean.csv")
 
 print_data_info(data_clean)
-# Number of rows: 912793
-# Number of unique urls: 85784
-# Number of unique domains: 939
-# Mean rows per url: 10.64
+# Number of rows: 994223
+# Number of unique urls: 100998
+# Number of unique domains: 1172
+# Mean rows per url: 9.84
 
 
 # 1. filter polars dataframe text elements by diversity keywords
@@ -131,10 +131,10 @@ data_filtered = (
 )
 
 print_data_info(data_filtered)
-# Number of rows: 3259
-# Number of unique urls: 2088
-# Number of unique domains: 543
-# Mean rows per url: 1.56
+# Number of rows: 6121
+# Number of unique urls: 3571
+# Number of unique domains: 735
+# Mean rows per url: 1.71
 
 data_filtered.write_csv("an_lexicon/data/data_filtered.csv")
 
