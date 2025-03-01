@@ -61,8 +61,7 @@ keywords = [
     "gleichstellung",
     "diskriminierung",
     "chancengleichheit",
-    "vielfalt",
-    "vielfält\S*"
+    "vielfalt"
 ]
 
 pattern = r'\b(' + '|'.join(keywords) + r')\b'
@@ -131,10 +130,10 @@ data_filtered = (
 )
 
 print_data_info(data_filtered)
-# Number of rows: 6121
-# Number of unique urls: 3571
-# Number of unique domains: 735
-# Mean rows per url: 1.71
+# Number of rows: 5840
+# Number of unique urls: 3367
+# Number of unique domains: 721
+# Mean rows per url: 1.73
 
 data_filtered.write_csv("an_lexicon/data/data_filtered.csv")
 
