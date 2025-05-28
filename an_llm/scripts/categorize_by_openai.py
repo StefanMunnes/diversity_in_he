@@ -14,36 +14,44 @@ client = OpenAI(api_key=openai_key)
 data_lexicon_lookedup = pl.read_parquet("an_lexicon/data/data_lexicon_lookedup.parquet")
 
 data_ready = (
-  data_lexicon_lookedup
-  .filter(pl.col("concept_category").is_in(["Collective", "Individual", "Hybrid"]))
-  .filter(pl.col("country").is_in(["usa", "uk"]))
-  .with_columns(
-    # create row number as index
-      index = pl.col("url").cum_count()
-  )
-  )
+    data_lexicon_lookedup.filter(
+        pl.col("concept_category").is_in(["Collective", "Individual", "Hybrid"])
+    )
+    .filter(pl.col("country").is_in(["usa", "uk"]))
+    .with_columns(
+        # create row number as index
+        index=pl.col("url").cum_count()
+    )
+)
 
 # loop over excel files and combine all three as dataframes
 df_list = []
 
-for country in ["usa", "uk"]:
-    temp_pl = pl.read_excel(f"an_llm/data/handcoding/data_filtered_sample_{country}_SG.xlsx")
+for country in ["usa", "uk", "ind"]:
+    temp_pl = pl.read_excel(
+        f"an_llm/data/handcoding/done/data_filtered_sample_{country}.xlsx"
+    )
     df_list.append(temp_pl)
 
-data_ready_eng = pl.concat(df_list, how="vertical").rename({"concept":"concept_SG"}).with_columns(index = pl.col("url").cum_count())
+data_ready_eng = (
+    pl.concat(df_list, how="vertical")
+    # .rename({"concept": "concept_SG"})
+    .with_columns(index=pl.col("url").cum_count())
+)
 
 
 data_ready_ger = (
-    pl
-    .read_excel(f"an_llm/data/handcoding/data_filtered_sample_ger_SG.xlsx")
+    pl.read_excel(f"an_llm/data/handcoding/data_filtered_sample_ger_SG.xlsx")
     .filter(pl.col("country") == "ger")
-    .with_columns(index = pl.col("url")
-    .cum_count())
+    .with_columns(index=pl.col("url").cum_count())
 )
 
 
 # system prompt: read txt file with prompt
-with open("an_llm/prompts/prompt_indiv_colle_v5_ger.txt", "r", encoding="utf8") as f:
+with open("an_llm/prompts/prompt_indiv_colle_v7_eng.txt", "r", encoding="utf8") as f:
+    prompt_system = f.read()
+
+with open("an_llm/prompts/prompt_indiv_colle_v6_ger.txt", "r", encoding="utf8") as f:
     prompt_system = f.read()
 
 
@@ -55,7 +63,7 @@ data_results = pl.DataFrame(schema={"token": pl.String, "linprob": pl.Float64})
 
 time_start = time.time()
 
-for row in data_ready_ger.iter_rows(named = True):
+for row in data_ready_eng.iter_rows(named=True):
 
     # print progress
     print(f"Row: {row['index']}")
@@ -93,26 +101,21 @@ for row in data_ready_ger.iter_rows(named = True):
 
 
 time_end = time.time()
-print(f"Time: {round((time_end - time_start) / 60)} minutes") # eng: ~5 Minutes # ger: ~1 minutes
+print(
+    f"Time: {round((time_end - time_start) / 60)} minutes"
+)  # eng: ~5 Minutes # ger: ~1 minutes
 
 
+concept_lab = {1: "Individual", 2: "Collective", 3: "Neutral/Irrelevant"}
 
-concept_lab = {1: "Individual", 2: "Collective", 3: "Neutral", 4: "Irrelevant"}
-
-data_results_wide = (
-    data_results
-    .with_columns(
-        sequence = (pl.arange(0, data_results.shape[0]) % 3) + 1,
-        group = pl.arange(0, data_results.shape[0]) // 3,
-        token = pl.when(
-            pl.col("token").cast(pl.Int64, strict=False).is_in([1, 2, 3, 4])
-        )
-        .then(pl.col("token").cast(pl.Int64, strict=False))
-        .otherwise(pl.lit(None))
-        .replace_strict(concept_lab)
-    )
-    .pivot(values=["token", "linprob"], index="group", on="sequence")
-)
+data_results_wide = data_results.with_columns(
+    sequence=(pl.arange(0, data_results.shape[0]) % 3) + 1,
+    group=pl.arange(0, data_results.shape[0]) // 3,
+    token=pl.when(pl.col("token").cast(pl.Int64, strict=False).is_in([1, 2, 3]))
+    .then(pl.col("token").cast(pl.Int64, strict=False))
+    .otherwise(pl.lit(None))
+    .replace_strict(concept_lab),
+).pivot(values=["token", "linprob"], index="group", on="sequence")
 
 # write results to excel file
-data_results_wide.write_excel("an_llm/data/data_results_v5_ger.xlsx")
+data_results_wide.write_excel("an_llm/data/data_results_v7_eng.xlsx")
