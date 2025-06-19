@@ -21,10 +21,9 @@ df_cntry = (
     pl.concat(df_cntry_ls, how="vertical")
     .with_columns(pl.col(["SG concept", "YS concept"]).replace({4: 3}))
     .with_columns(
-        concept_YS=pl.col("YS concept").replace_strict(concept_lab),
-        concept_SG=pl.col("SG concept").replace_strict(concept_lab),
+        YS=pl.col("YS concept").replace_strict(concept_lab),
+        SG=pl.col("SG concept").replace_strict(concept_lab),
     )
-    # .rename({"concept":f"concept_{prsn}"})
 )
 
 
@@ -35,15 +34,15 @@ df_combined = (
     pl.concat([df_ai, df_cntry], how="horizontal")
     .with_columns(pl.col("token_1").alias("LLM"))
     .with_columns(
-        match_LLM_SG=pl.col("LLM") == pl.col("concept_SG"),
-        match_LLM_YS=pl.col("LLM") == pl.col("concept_YS"),
-        match_SG_YS=pl.col("concept_YS") == pl.col("concept_SG"),
+        match_LLM_SG=pl.col("LLM") == pl.col("SG"),
+        match_LLM_YS=pl.col("LLM") == pl.col("YS"),
+        match_SG_YS=pl.col("YS") == pl.col("SG"),
     )
     .select(
         [
             "LLM",
-            "concept_SG",
-            "concept_YS",
+            "SG",
+            "YS",
             "match_SG_YS",
             "match_LLM_SG",
             "match_LLM_YS",
@@ -68,28 +67,26 @@ def compute_match_percentage(df, col1, col2):
 
 
 # Compute pairwise match percentages
-match_token1_conceptSG = compute_match_percentage(df_combined, "LLM", "concept_SG")
-match_token1_conceptYS = compute_match_percentage(df_combined, "LLM", "concept_YS")
-match_conceptSG_conceptYS = compute_match_percentage(
-    df_combined, "concept_SG", "concept_YS"
-)
+match_token1_conceptSG = compute_match_percentage(df_combined, "LLM", "SG")
+match_token1_conceptYS = compute_match_percentage(df_combined, "LLM", "YS")
+match_conceptSG_conceptYS = compute_match_percentage(df_combined, "SG", "YS")
 
 # Print results
-print(f"LLM vs concept_SG: {match_token1_conceptSG:.2f}% match")
-print(f"LLM vs concept_YS: {match_token1_conceptYS:.2f}% match")
-print(f"concept_SG vs concept_YS: {match_conceptSG_conceptYS:.2f}% match")
+print(f"LLM vs SG: {match_token1_conceptSG:.2f}% match")
+print(f"LLM vs YS: {match_token1_conceptYS:.2f}% match")
+print(f"SG vs YS: {match_conceptSG_conceptYS:.2f}% match")
 
 
 # draw 3 scatter plots for each inter-coder pair (dis)agreement of categories
 import matplotlib.pyplot as plt
 
 pairs = [
-    ("LLM", "concept_SG"),
-    ("LLM", "concept_YS"),
-    ("concept_SG", "concept_YS"),
+    ("LLM", "SG"),
+    ("LLM", "YS"),
+    ("SG", "YS"),
 ]
 
-df_dropped = df_combined.drop_nulls(["LLM", "concept_SG", "concept_YS"])
+df_dropped = df_combined.drop_nulls(["LLM", "SG", "YS"])
 
 # TODO color by country
 
