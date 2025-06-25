@@ -11,35 +11,55 @@ client = OpenAI(api_key=openai_key)
 
 # Determine variables (version, languages)
 version = "v8"
-languages = ["eng", "ger"]
+languages = ["eng"]  # ["eng", "ger"]
+testing = False
 
 for lang in languages:
     print(f"Processing {lang.upper()} data")
 
     if lang == "eng":
-        df_list = []
-        # Load and combine Excel files for USA, UK, and IND
-        for country in ["usa", "uk", "ind"]:
-            temp_pl = pl.read_excel(
-                f"an_llm/data/handcoding/done/data_filtered_sample_{country}.xlsx"
+
+        eng_countries = ["usa", "uk", "ind"]
+
+        if testing:
+            # Load and combine Excel files for USA, UK, and IND
+            df_list = []
+
+            for country in eng_countries:
+                temp_pl = pl.read_excel(
+                    f"an_llm/testing/data_sample/data_filtered_sample_{country}.xlsx"
+                )
+
+                df_list.append(temp_pl)
+
+            data_ready = pl.concat(df_list, how="vertical")
+        else:
+            data_ready = pl.read_csv("an_lexicon/data/data_filtered.csv").filter(
+                pl.col("country").is_in(eng_countries)
             )
-            df_list.append(temp_pl)
-        data_ready = pl.concat(df_list, how="vertical").with_columns(
-            index=pl.col("url").cum_count()
-        )
 
     elif lang == "ger":
-        data_ready = pl.read_excel(
-            "an_llm/data/handcoding/done/data_filtered_sample_ger.xlsx"
-        ).with_columns(index=pl.col("url").cum_count())
+        if testing:
+            data_ready = pl.read_excel(
+                "an_llm/testing/data_sample/data_filtered_sample_ger.xlsx"
+            )
+        else:
+            data_ready = pl.read_csv("an_lexicon/data/data_filtered.csv").filter(
+                pl.col("country") == "ger"
+            )
 
     else:
         print(f"Language '{lang}' is not supported.")
         continue
 
+    data_ready = data_ready.with_columns(index=pl.col("url").cum_count())
+
     # define language specific paths
     prompt_path = f"an_llm/prompts/prompt_indiv_colle_{version}_{lang}.txt"
-    output_path = f"an_llm/data/data_results_{version}_{lang}.xlsx"
+    if testing:
+        output_path = f"an_llm/testing/openai/data_results_{version}_{lang}.xlsx"
+    else:
+        output_path = f"an_llm/data/data_results_{version}_{lang}.xlsx"
 
     # Read system prompt from the corresponding prompt file
     with open(prompt_path, "r", encoding="utf8") as f:
