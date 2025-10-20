@@ -144,10 +144,10 @@ def extract_texts_from_urls(country="Germany", sample_num=0):
         A DataFrame containing errors that occurred during extraction.
     """
     # load country specific pkl file from scraping country folder
-    file_urls = os.listdir(f"scraping/{country}")
+    file_urls = os.listdir(f"data/scraping/{country}")
     file_urls = [f for f in file_urls if f.endswith(".pkl")]
 
-    with open(f"scraping/{country}/{file_urls[0]}", "rb") as file:
+    with open(f"data/scraping/{country}/{file_urls[0]}", "rb") as file:
         urls_raw = pickle.load(file)  # [22021:]
 
     # Remove hashtags (link to subsections) from urls and remove duplicates
@@ -158,14 +158,14 @@ def extract_texts_from_urls(country="Germany", sample_num=0):
         urls_clean = sample(urls_clean, sample_num)
 
     # Define and write initial csv files (if not existing yet)
-    outfile_good = f"scraping/{country}/scraped_data.csv"
+    outfile_good = f"data/scraping/{country}/scraped_data.csv"
 
     if not os.path.isfile(outfile_good):
         with open(outfile_good, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow(variables)
 
-    outfile_bad = f"scraping/{country}/scraped_data_errors.csv"
+    outfile_bad = f"data/scraping/{country}/scraped_data_errors.csv"
 
     if not os.path.isfile(outfile_bad):
         with open(outfile_bad, mode="w", newline="", encoding="utf-8") as file:

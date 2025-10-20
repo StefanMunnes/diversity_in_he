@@ -1,0 +1,11 @@
+
+.venv/
+old/
+data/
+concepts/
+orga/
+
+*.csv
+*.xls*
+*.parquet
+*.pkl
