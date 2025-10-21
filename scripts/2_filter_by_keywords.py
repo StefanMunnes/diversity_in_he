@@ -24,7 +24,7 @@ def print_data_info(df: pl.DataFrame) -> None:
     print(f"Mean rows per url: {mean_rows_per_url}")
 
 
-data_clean = pl.read_csv("data/scraping/data_scraped_all_clean.csv")
+data_clean = pl.read_csv("data/data_scraped_all_clean.csv")
 
 print_data_info(data_clean)
 # Number of rows: 994223
@@ -42,13 +42,12 @@ with open("data/keywords.txt", "r", encoding="utf-8") as f:
 pattern = r"\b(" + "|".join(keywords) + r")\b"
 
 
-data_filtered = (
+data_prepare_filtering = (
     data_clean
     # remove page title rows
     .filter(~pl.col("tag").str.contains(r"title"))
     # keep just unique text elements per url
-    .unique(subset=["url", "text"])
-    .sort(["country", "domain", "url", "order"])
+    .unique(subset=["url", "text"]).sort(["country", "domain", "url", "order"])
     # extract and mark all keywords included in the text elements
     .with_columns(keywords=pl.col("text").str.to_lowercase().str.extract_all(pattern))
     # add indicators for heading and correct order
@@ -88,16 +87,34 @@ data_filtered = (
     )
     # keep just unique keywords (also after merge with followup)
     .with_columns(keywords=pl.col("keywords").list.unique())
+)
+
+# write prepared data to excel
+countries = {
+    "ger": "Germany",
+    "usa": "USA",
+    "uk": "UK",
+    "ind": "India",
+}
+
+with xlsxwriter.Workbook("data/data_prepare_filtering.xlsx") as workbook:
+    for code, sheet in countries.items():
+        (
+            data_prepare_filtering.filter(pl.col("country") == code)
+            .select(["keywords", "text", "domain"])
+            .with_columns(keywords=pl.col("keywords").list.join(", "))
+            .write_excel(workbook=workbook, worksheet=sheet)
+        )
+
+
+data_filtered = (
+    data_prepare_filtering
     # keep just text elements with keywords, that aren't headings and merged paragraphs
     .filter(
-        # (((pl.col('keywords').list.len() >= 2) & (pl.col("country") != "ger")) |
-        # ((pl.col('keywords').list.len() >= 1) & (pl.col("country") == "ger"))) &
-        # (~pl.col("is_heading") & ~pl.col("remove_following"))
         pl.col("keywords").list.len() >= 2,
         ~pl.col("is_heading"),
         ~pl.col("remove_following"),
-    )
-    .select(["keywords", "text", "country", "domain", "url"])
+    ).select(["keywords", "text", "country", "domain", "url"])
     # cast list of keywords to string
     .with_columns(keywords=pl.col("keywords").list.join(", "))
 )
