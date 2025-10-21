@@ -101,6 +101,7 @@ data_uni_infos = pd.read_csv("data/uni_infos/university_infos.csv")
 
 data_uni_classified_infos = data_uni_classified.merge(
     data_uni_infos, how="left", on=["country", "domain"]
-)
+).dropna(subset=["name"])
 
-data_uni_classified_infos.to_csv("data/uni_classified_infos.csv", index=False)
+data_uni_classified_infos.to_csv("data/uni_classified_infos.csv", sep = ";", index=False)
+data_uni_classified_infos.to_excel("data/uni_classified_infos.xlsx", index=False)
