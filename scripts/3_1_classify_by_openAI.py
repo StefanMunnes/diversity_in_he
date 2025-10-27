@@ -14,14 +14,28 @@ version = "v9"
 languages = ["eng", "ger"]  # ["eng", "ger"]
 testing = False
 
+openai_model = "gpt-4o"
+concept_lab = {1: "Individual", 2: "Collective", 3: "Neutral/Irrelevant"}
+
+file_data_input = "data/data_filtered_language.csv"
+
+
 for lang in languages:
     print(f"Processing {lang.upper()} data")
 
-    if lang == "eng":
+    # define language specific paths
+    prompt_path = f"data/classification/prompts/prompt_indiv_colle_{version}_{lang}.txt"
 
-        eng_countries = ["usa", "uk", "ind"]
+    if testing:
 
-        if testing:
+        output_path = (
+            f"data/classification/testing/openai/data_results_{version}_{lang}.csv"
+        )
+
+        if lang == "eng":
+
+            eng_countries = ["usa", "uk", "ind"]
+
             # Load and combine Excel files for USA, UK, and IND
             df_list = []
 
@@ -33,35 +47,23 @@ for lang in languages:
                 df_list.append(temp_pl)
 
             data_ready = pl.concat(df_list, how="vertical")
-        else:
-            data_ready = pl.read_csv("data/data_filtered.csv").filter(
-                pl.col("country").is_in(eng_countries)
-            )
 
-    elif lang == "ger":
-        if testing:
+        elif lang == "ger":
+
             data_ready = pl.read_excel(
                 "data/classification/testing/data_sample/data_filtered_sample_ger.xlsx"
             )
+
         else:
-            data_ready = pl.read_csv("data/data_filtered.csv").filter(
-                pl.col("country") == "ger"
-            )
+            print(f"Language '{lang}' is not supported.")
+            continue
 
-    else:
-        print(f"Language '{lang}' is not supported.")
-        continue
-
-    data_ready = data_ready.with_columns(index=pl.col("url").cum_count())
-
-    # define language specific paths
-    prompt_path = f"data/classification/prompts/prompt_indiv_colle_{version}_{lang}.txt"
-    if testing:
-        output_path = (
-            f"data/classification/testing/openai/data_results_{version}_{lang}.csv"
-        )
     else:
         output_path = f"data/classification/data_results_{version}_{lang}.csv"
+
+        data_ready = pl.read_csv(file_data_input).filter(pl.col("language") == lang)
+
+    data_ready = data_ready.with_columns(index=pl.col("url").cum_count())
 
     # Read system prompt from the corresponding prompt file
     with open(prompt_path, "r", encoding="utf8") as f:
@@ -79,7 +81,7 @@ for lang in languages:
             {"role": "user", "content": row["text"]},
         ]
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=openai_model,
             messages=message,
             max_tokens=1,
             temperature=0,
@@ -104,7 +106,7 @@ for lang in languages:
     )
 
     # Map numeric tokens to their corresponding labels and pivot the results dataframe
-    concept_lab = {1: "Individual", 2: "Collective", 3: "Neutral/Irrelevant"}
+
     data_results_wide = data_results.with_columns(
         sequence=(pl.arange(0, data_results.shape[0]) % 3) + 1,
         group=pl.arange(0, data_results.shape[0]) // 3,
