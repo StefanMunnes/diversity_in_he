@@ -10,10 +10,16 @@ data_results.write_csv("data/data_classified.csv")
 
 
 # 2. combine classified and filtered data
-data_filtered = pl.read_csv("data/data_filtered.csv")
+data_filtered = pl.read_csv("data/data_filtered_language.csv")
 
 data_aggregated = (
     pl.concat([data_filtered, data_results], how="horizontal")
+    # set prediction to NULL of probability < 0.5
+    .with_columns(
+        token_1=pl.when(pl.col("linprob_1") <= 50)
+        .then(pl.lit(None))
+        .otherwise(pl.col("token_1"))
+    )
     .group_by("country", "domain", "token_1")
     .len()
     .pivot(values="len", index=["country", "domain"], on="token_1")
