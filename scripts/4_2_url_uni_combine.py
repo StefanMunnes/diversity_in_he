@@ -58,7 +58,7 @@ data_urls_scraped["country"] = data_urls_scraped["country"].replace(
 )
 
 # 2. load filtered data and add number of texts
-data_filtered = pd.read_csv("data/data_filtered.csv")
+data_filtered = pd.read_csv("data/data_filtered_language.csv")
 
 data_urls_filtered = (
     data_filtered.groupby(["country", "domain", "url"])["text"]
@@ -103,5 +103,5 @@ data_uni_classified_infos = data_uni_classified.merge(
     data_uni_infos, how="left", on=["country", "domain"]
 ).dropna(subset=["name"])
 
-data_uni_classified_infos.to_csv("data/uni_classified_infos.csv", sep = ";", index=False)
+data_uni_classified_infos.to_csv("data/uni_classified_infos.csv", sep=";", index=False)
 data_uni_classified_infos.to_excel("data/uni_classified_infos.xlsx", index=False)

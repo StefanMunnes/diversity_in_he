@@ -2,7 +2,7 @@ library(dplyr)
 library(stringr)
 library(arsenal)
 
-data <- read.csv("data/uni_classified_infos.csv") |>
+data <- read.csv2("data/uni_classified_infos.csv", na.strings = "") |>
   mutate(
     country_name = case_match(
       country,
@@ -12,6 +12,8 @@ data <- read.csv("data/uni_classified_infos.csv") |>
       "germany" ~ "Germany",
       .default = country
     ),
+    across(texts_all_total:ind_coll_prop, as.numeric),
+    across(student_size_n:international_per, as.numeric),
     across(c(name, url, elite, private, old), ~ na_if(., "")),
     across(c(urls_filtered_count, texts_filtered_total), ~ na_if(., 0))
   ) |>
@@ -30,17 +32,17 @@ ctrl <- arsenal::tableby.control(
 descriptives <- arsenal::tableby(
   country_name ~
     urls_all_count +
-      texts_all_total +
-      urls_filtered_count +
-      texts_filtered_total +
-      elite +
-      private +
-      old +
-      student_size_n +
-      international_per +
-      Collective +
-      Individual +
-      ind_coll_prop,
+    texts_all_total +
+    urls_filtered_count +
+    texts_filtered_total +
+    elite +
+    private +
+    old +
+    student_size_n +
+    international_per +
+    Collective +
+    Individual +
+    ind_coll_prop,
   data = data,
   control = ctrl
 ) |>
