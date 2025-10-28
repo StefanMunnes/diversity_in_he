@@ -22,6 +22,7 @@ data_aggregated = (
     )
     .group_by("country", "domain", "token_1")
     .len()
+    .filter(pl.col("token_1").is_not_null())
     .pivot(values="len", index=["country", "domain"], on="token_1")
     .fill_null(0)
     .with_columns(
